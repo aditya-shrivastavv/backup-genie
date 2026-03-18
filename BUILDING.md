@@ -203,6 +203,48 @@ Filename: "{app}\BackupGenie.exe"; Description: "Launch Backup Genie"; Flags: no
 installer-output\
 ```
 
+## GitHub Actions Release Pipeline
+
+This repository includes a manual GitHub Actions workflow at:
+
+```text
+.github/workflows/release.yml
+```
+
+It is triggered with `workflow_dispatch` and is designed to:
+
+- build the app on `windows-latest`
+- publish a self-contained single-file `win-x64` executable
+- upload the published files as workflow artifacts
+- create a GitHub Release
+- attach both a `.zip` archive and the generated `BackupGenie.exe`
+
+### How To Use The Workflow
+
+1. Push the repository to GitHub.
+2. Open the repository in GitHub.
+3. Go to `Actions`.
+4. Open the `Build And Release` workflow.
+5. Click `Run workflow`.
+6. Enter a tag such as:
+
+```text
+v1.0.0
+```
+
+7. Optionally enter a release title.
+8. Choose whether the release should be marked as `draft` or `prerelease`.
+9. Run the workflow.
+
+### GitHub Release Output
+
+After a successful run, GitHub will create a Release containing:
+
+- `BackupGenie-<tag>-win-x64.zip`
+- `BackupGenie.exe`
+
+The workflow also stores the publish output as a workflow artifact for download from the Actions run page.
+
 ## Suggested Release Checklist
 
 Before sharing a build with other users:

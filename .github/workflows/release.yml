@@ -1,0 +1,87 @@
+name: Build And Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to create, for example v1.0.0
+        required: true
+        type: string
+      release_name:
+        description: Optional release title
+        required: false
+        default: ""
+        type: string
+      prerelease:
+        description: Mark the release as a prerelease
+        required: true
+        default: false
+        type: boolean
+      draft:
+        description: Create the release as a draft
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore BackupGenie.csproj
+
+      - name: Build project
+        run: dotnet build BackupGenie.csproj --configuration Release --no-restore
+
+      - name: Publish single-file Windows executable
+        run: >
+          dotnet publish BackupGenie.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:DebugType=None
+          -p:DebugSymbols=false
+          --output publish
+
+      - name: Create release archive
+        shell: pwsh
+        run: |
+          $archiveName = "BackupGenie-${{ inputs.release_tag }}-win-x64.zip"
+          if (Test-Path $archiveName) {
+            Remove-Item $archiveName -Force
+          }
+          Compress-Archive -Path publish\* -DestinationPath $archiveName
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: BackupGenie-${{ inputs.release_tag }}-win-x64
+          path: |
+            publish/**
+            BackupGenie-${{ inputs.release_tag }}-win-x64.zip
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.release_tag }}
+          name: ${{ inputs.release_name != '' && inputs.release_name || inputs.release_tag }}
+          draft: ${{ inputs.draft }}
+          prerelease: ${{ inputs.prerelease }}
+          generate_release_notes: true
+          files: |
+            BackupGenie-${{ inputs.release_tag }}-win-x64.zip
+            publish/BackupGenie.exe
